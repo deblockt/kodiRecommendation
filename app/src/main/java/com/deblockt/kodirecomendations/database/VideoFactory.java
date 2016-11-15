@@ -22,11 +22,13 @@ public class VideoFactory {
      * @param type
      * @return
      */
-    public static Video createVideo(Context context, Integer id, String title, String poster, String fanart, String path, String description, Integer progress, String group, VideoType type) {
-        Video v = new Video(id, title, poster, fanart, path, description, progress, group, type);
+    public static Video createVideo(Context context, Integer id, String title, String poster, String fanart, String path, String description, Integer progress, String group, Integer duration, Integer year, VideoType type) {
+        Video v = new Video(id, title, poster, fanart, path, description, progress, group, type, year, duration);
+
         if (EmbySettings.exists()) {
             new VideoCompleter(context).complete(v);
         }
+
         return v;
     }
 }

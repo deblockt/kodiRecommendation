@@ -15,7 +15,6 @@ import android.net.Uri;
 import android.util.Log;
 
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 
@@ -29,13 +28,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +37,6 @@ import java.util.Map;
  */
 public final class  RecommendationBuilder {
     private static final String TAG = "RecommendationBuilder";
-    private static final String BACKGROUND_URI_PREFIX = "content://com.deblockt.kodirecomendations/background/";
 
     private String mTitle;
     private String mDescription;
@@ -139,10 +131,9 @@ public final class  RecommendationBuilder {
         Bundle extras = new Bundle();
 
         if (mBackgroundUri != null) {
-            RecommendationBackgroundContentProvider.addBackground(id, mBackgroundUri);
+            String backgroundURI = RecommendationBackgroundContentProvider.addBackground( mBackgroundUri);
             Log.d(TAG, "Add background " + id + " <==> " + mBackgroundUri);
-            extras.putString(Notification.EXTRA_BACKGROUND_IMAGE_URI,
-                    Uri.parse(BACKGROUND_URI_PREFIX + Integer.toString(id)).toString());
+            extras.putString(Notification.EXTRA_BACKGROUND_IMAGE_URI, backgroundURI);
         }
 
         builder.setExtras(extras);
@@ -158,113 +149,5 @@ public final class  RecommendationBuilder {
         return notification;
     }
 
-    public static class RecommendationBackgroundContentProvider extends ContentProvider {
-
-        private static Map<Integer, String> backgrounds = new HashMap<>();
-
-        public static void addBackground(int notifId, String backgroundUrl) {
-            backgrounds.put(notifId, backgroundUrl);
-        }
-
-        @Override
-        public boolean onCreate() {
-            return true;
-        }
-
-        @Override
-        public int delete(Uri uri, String selection, String[] selectionArgs) {
-            return 0;
-        }
-
-        @Override
-        public String getType(Uri uri) {
-            return null;
-        }
-
-        @Override
-        public Uri insert(Uri uri, ContentValues values) {
-            return null;
-        }
-
-        @Override
-        public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-                            String sortOrder) {
-            return null;
-        }
-
-        @Override
-        public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-            return 0;
-        }
-
-        private String getFileExtension(String name) {
-            try {
-                return name.substring(name.lastIndexOf(".") + 1);
-            } catch (Exception e) {
-                return "";
-            }
-        }
-
-        public String MD5(String md5) {
-            try {
-                java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
-                byte[] array = md.digest(md5.getBytes());
-                StringBuffer sb = new StringBuffer();
-                for (int i = 0; i < array.length; ++i) {
-                    sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
-                }
-                return sb.toString();
-            } catch (java.security.NoSuchAlgorithmException e) {
-            }
-            return null;
-        }
-
-        @Override
-        /*
-         * content provider serving files that are saved locally when recommendations are built
-         */
-        public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-            Log.i(TAG, "openFile " + uri.getPath());
-            if (uri.getPathSegments().isEmpty() || !"background".equals(uri.getPathSegments().get(0))) {
-                return null;
-            }
-
-            int backgroundId = Integer.parseInt(uri.getLastPathSegment());
-            if (!backgrounds.containsKey(backgroundId)) {
-                Log.e(TAG, "Erreur aucune image de fond pour le background " + backgroundId);
-                return null;
-            }
-
-            String fileUri = backgrounds.get(backgroundId);
-            if (fileUri.startsWith("file://")) {
-                fileUri = fileUri.substring(7);
-            } else if (fileUri.startsWith("http")) {
-                try {
-                    String md5 = MD5(fileUri);
-                    File destFile = new File(getContext().getCacheDir(), md5 + "." + getFileExtension(fileUri));
-                    // don't download file if not already exists
-                    if (!destFile.exists()) {
-                        Log.d(TAG, "Downloading file " + fileUri);
-                        FileUtils.copyURLToFile(new URL(fileUri), destFile);
-                        Log.d(TAG, "file downloaded " + destFile.getAbsolutePath());
-                    }
-                    fileUri = destFile.getAbsolutePath();
-
-                    backgrounds.put(backgroundId, fileUri);
-                } catch (Exception e) {
-                    Log.e(TAG, e.getMessage(), e);
-                }
-
-            }
-
-            File f = new File(fileUri);
-            if (!f.exists()) {
-                Log.e(TAG, "file " + fileUri + " doesn't exists");
-            } else {
-                Log.d(TAG, "file " + fileUri + " loaded");
-            }
-            return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
-        }
-    }
 }
 

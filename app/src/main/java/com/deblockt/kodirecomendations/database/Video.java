@@ -7,6 +7,8 @@ import android.util.Log;
  */
 public class Video {
 
+    private final Integer duration;
+    private final Integer year;
     private VideoType type;
     private String title;
     private String poster;
@@ -17,7 +19,7 @@ public class Video {
     private String description;
     private String group;
 
-    public Video(Integer id, String title, String poster, String fanart, String path, String description, Integer progress, String group, VideoType type) {
+    public Video(Integer id, String title, String poster, String fanart, String path, String description, Integer progress, String group, VideoType type, Integer year, Integer duration) {
         Log.d("Video", "Fanart : " + fanart);
         this.title = title;
         this.poster = poster;
@@ -28,6 +30,8 @@ public class Video {
         this.description = description;
         this.group = group;
         this.type = type;
+        this.year = year;
+        this.duration = duration;
     }
 
     public String getTitle() {
@@ -100,5 +104,13 @@ public class Video {
 
     public VideoType getType() {
         return type;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public Integer getYear() {
+        return year;
     }
 }

@@ -56,6 +56,9 @@ public class KodiGuidedStepFragment extends GuidedStepFragment {
                     AlarmManager.INTERVAL_HALF_HOUR,
                     alarmIntent);
 
+            this.getActivity().startService(recommendationIntent);
+
+
             getActivity().finish();
         }
     }

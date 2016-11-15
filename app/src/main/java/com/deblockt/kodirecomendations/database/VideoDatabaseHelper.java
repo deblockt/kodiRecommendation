@@ -49,6 +49,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end  as path "+
             ", (resumeTimeInSeconds / totalTimeInSeconds) * 100 as progress "+
             ", 'Reprendre' as description "+
+            ", 0 as year, 0 as duration " +
             "FROM movie_view " +
             "WHERE "+
             " resumeTimeInSeconds / totalTimeInSeconds > 0.05 "+
@@ -64,6 +65,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path "+
             ", (resumeTimeInSeconds / totalTimeInSeconds) * 100 as progress "+
             ", 'Reprendre' as description "+
+            ", 0 as year, 0 as duration " +
             "FROM episode_view  "+
             "WHERE  "+
             " resumeTimeInSeconds / totalTimeInSeconds > 0.05  "+
@@ -79,6 +81,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path "+
             ", null as progress "+
             ", 'Nouveau' as description "+
+            ", 0 as year, 0 as duration " +
             "FROM movie_view  "+
             "WHERE  "+
             "playCount is null "+
@@ -93,6 +96,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             ", case when episode_view.strFilename like episode_view.strPath  || '%' then  episode_view.strFilename else  'file://' || episode_view.strPath || episode_view.strFilename end as path "+
             ", null as progress "+
             ", 'Nouvelle série' as description "+
+            ", 0 as year, 0 as duration " +
             "	from episode_view "+
             "	join season_view on episode_view.idSeason = season_view.idSeason  "+
             "	join tvshow_view on tvshow_view.idShow = season_view.idShow "+
@@ -142,6 +146,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             ", case when episode_view.strFilename like episode_view.strPath  || '%' then  episode_view.strFilename else  'file://' || episode_view.strPath || episode_view.strFilename end as path "+
             ", episode_view.c13 * 100 / season_view.episodes as progress "+
             ", 'saison ' || episode_view.c12 || ' ep. ' ||  episode_view.c13 as description "+
+            ", 0 as year, 0 as duration " +
             "	from episode_view "+
             "	join season_view on episode_view.idSeason = season_view.idSeason  "+
             "	join tvshow_view on tvshow_view.idShow = season_view.idShow "+
@@ -182,10 +187,10 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-    private void addToVideoList(SQLiteDatabase readableDatabase, List<Video> list, String query, String group, VideoType type) {
+    private void addToVideoList(SQLiteDatabase readableDatabase, List<Video> list, String query, String group, VideoType type, String... parameters) {
         Cursor cursor = null;
         try {
-            cursor = readableDatabase.rawQuery(query, new String[]{});
+            cursor = readableDatabase.rawQuery(query, parameters);
 
             while (cursor.moveToNext()) {
                 Log.i(TAG, cursor.getString(cursor.getColumnIndex("title")) + " is found!!! ");
@@ -200,8 +205,11 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
                         cursor.getString(cursor.getColumnIndex("description")),
                         cursor.getInt(cursor.getColumnIndex("progress")),
                         group,
+                        cursor.getInt(cursor.getColumnIndex("duration")),
+                        cursor.getInt(cursor.getColumnIndex("year")),
                         type
                 );
+
                 list.add(v);
             }
         } catch (Exception e) {
@@ -256,6 +264,46 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    public List<Video> findByName(String name) {
+        SQLiteDatabase readableDatabase = this.getReadableDatabase();
+        List<Video> retour = new ArrayList<>();
+
+        String query = "Select idMovie + " + MOVIE_ADD_ID + " as id, c00 as title, c08 as poster, c20 as fanart " +
+                ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path " +
+                ", null as progress "+
+                ", c01 as description " +
+                ", c07 as year " +
+                ", c11 / 60 as duration" +
+                " from movie_view " +
+                " where c00 like ?";
+
+        addToVideoList(readableDatabase, retour, query, "finded", VideoType.MOVIE, "%" + name + "%");
+
+        readableDatabase.close();
+
+        return retour;
+    }
+
+    public Video findMovieById(String id) {
+        SQLiteDatabase readableDatabase = this.getReadableDatabase();
+        List<Video> retour = new ArrayList<>();
+
+        String query = "Select idMovie + "  + MOVIE_ADD_ID + " as id, c00 as title, c08 as poster, c20 as fanart " +
+                ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path " +
+                ", null as progress "+
+                ", c01 as description " +
+                ", c07 as year " +
+                ", c11 / 60 as duration" +
+                " from movie_view " +
+                " where idMovie = ?";
+
+        addToVideoList(readableDatabase, retour, query, "finded", VideoType.MOVIE, id);
+
+        readableDatabase.close();
+
+        return retour.get(0);
     }
 }
 

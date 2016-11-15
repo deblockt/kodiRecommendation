@@ -4,11 +4,10 @@ import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Intent;
-import android.util.Log;
 import android.net.Uri;
-
-import android.support.v4.app.TaskStackBuilder;
+import android.util.Log;
 
 import com.deblockt.kodirecomendations.database.Video;
 import com.deblockt.kodirecomendations.database.VideoDatabaseHelper;
@@ -45,7 +44,7 @@ public class UpdateRecommendationsService extends IntentService {
         try {
             RecommendationBuilder builder = new RecommendationBuilder()
                     .setContext(getApplicationContext())
-                    .setSmallIcon(R.drawable.videos_icon);
+                    .setSmallIcon(R.drawable.kodi_reco_icon);
 
             
 	   	for (Video lastVideo : lastVideos) {
@@ -58,9 +57,9 @@ public class UpdateRecommendationsService extends IntentService {
 		            .setDescription(lastVideo.getDescription())
 		            .setImage(manager.getCacheFile(lastVideo.getPoster()))
 		            .setIntent(buildPendingIntent(lastVideo))
-   			    .setProgress(lastVideo.getProgress())
-			    .setGroup(lastVideo.getGroup())
-		            .build();
+                    .setProgress(lastVideo.getProgress())
+                    .setGroup(lastVideo.getGroup())
+                    .build();
 
 		    ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(lastVideo.getId(), notification);
 	   	}
@@ -70,12 +69,14 @@ public class UpdateRecommendationsService extends IntentService {
     }
 
     private PendingIntent buildPendingIntent(Video movie) {
-        Intent detailsIntent = new Intent(Intent.ACTION_VIEW,  Uri.parse(movie.getPath()));
-		detailsIntent.setDataAndType(Uri.parse(movie.getPath()), "video/*");
-	    detailsIntent.setPackage("org.xbmc.kodi");
 
-		Log.i(TAG, "URI : " + Uri.parse(movie.getPath()));
-        PendingIntent pendingIntent = PendingIntent.getActivity(this,(int) System.currentTimeMillis(),detailsIntent,0);
+        Intent intent = new Intent();
+        Uri videoUri = Uri.parse(movie.getPath());
+        intent.setDataAndType(videoUri, "video/*");
+        intent.setComponent(new ComponentName("org.xbmc.kodi", "org.xbmc.kodi.Splash"));
+        intent.setAction(Intent.ACTION_VIEW);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), intent, 0);
 
         return pendingIntent;
     }

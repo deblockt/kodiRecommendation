@@ -29,8 +29,10 @@ public class BootupActivity extends BroadcastReceiver {
 
         alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 INITIAL_DELAY,
-                AlarmManager.INTERVAL_HALF_HOUR,
+                AlarmManager.INTERVAL_FIFTEEN_MINUTES,
                 alarmIntent);
+
+
     }
 
 
