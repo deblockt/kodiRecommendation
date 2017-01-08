@@ -19,7 +19,7 @@ public class TextureDatabaseHelper extends SQLiteOpenHelper {
     // init db file name
     static {
         DB_PATH = KodiSettings.getDBPath(DB_NAME);
-        if (DB_PATH != null) {
+        if (DB_PATH == null) {
             Log.e(TAG, "Kodi database " + DB_NAME + " can not be found");
         } else {
             Log.i(TAG, "Kodi database found " + DB_PATH);

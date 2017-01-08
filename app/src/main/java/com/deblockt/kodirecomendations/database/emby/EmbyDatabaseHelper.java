@@ -39,11 +39,15 @@ public class EmbyDatabaseHelper extends SQLiteOpenHelper {
 
         Cursor cursor = null;
         try {
-            EmbyInfo info = new EmbyInfo();
+            EmbyInfo info = null;
 
             cursor = readableDatabase.rawQuery(type.getRequest(), new String[]{String.valueOf(kodiId)});
 
+            Log.d(TAG, "run query " + type.getRequest());
+            Log.d(TAG, "parameter " + String.valueOf(kodiId));
+
             if (cursor.moveToNext()) {
+                info = new EmbyInfo();
                 info.setPrimaryItem(cursor.getString(cursor.getColumnIndex("primary_item")));
                 info.setBackdropItem(cursor.getString(cursor.getColumnIndex("backdrop_item")));
                 info.setTag(cursor.getString(cursor.getColumnIndex("tag")));
@@ -69,8 +73,8 @@ public class EmbyDatabaseHelper extends SQLiteOpenHelper {
      */
     private static final String EPISODE_INFO = "select episode.emby_id as tag , season.emby_id as primary_item,  tvshow.emby_id as backdrop_item " +
             "from emby episode " +
-            "join emby season on season.kodi_id = episode.parent_id and season.emby_type = 'Season' " +
-            "join emby tvshow on tvshow.kodi_id = season.parent_id and tvshow.media_type = 'tvshow' " +
+            "left join emby season on season.kodi_id = episode.parent_id and season.emby_type = 'Season' " +
+            "left join emby tvshow on tvshow.kodi_id = season.parent_id and tvshow.media_type = 'tvshow' " +
             "where episode.kodi_id = ? and episode.emby_type='Episode'";
 
     /**

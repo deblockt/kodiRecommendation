@@ -1,4 +1,4 @@
-package com.deblockt.kodirecomendations;
+package com.deblockt.kodirecomendations.search;
 
 import android.app.SearchManager;
 import android.content.ContentProvider;
@@ -8,13 +8,14 @@ import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
-import android.support.annotation.StringDef;
-import android.text.TextUtils;
 import android.util.Log;
 
+import com.deblockt.kodirecomendations.RecommendationBackgroundContentProvider;
 import com.deblockt.kodirecomendations.database.Video;
 import com.deblockt.kodirecomendations.database.VideoDatabaseHelper;
+import com.deblockt.kodirecomendations.search.parser.QueryParser;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.deblockt.kodirecomendations.database.VideoDatabaseHelper.MOVIE_ADD_ID;
@@ -32,7 +33,8 @@ public class VideoContentProvider extends ContentProvider {
             SearchManager.SUGGEST_COLUMN_DURATION,
             SearchManager.SUGGEST_COLUMN_PRODUCTION_YEAR,
             SearchManager.SUGGEST_COLUMN_CONTENT_TYPE,
-            SearchManager.SUGGEST_COLUMN_RESULT_CARD_IMAGE
+            SearchManager.SUGGEST_COLUMN_RESULT_CARD_IMAGE,
+            SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA
     };
 
     @Override
@@ -40,14 +42,46 @@ public class VideoContentProvider extends ContentProvider {
         return false;
     }
 
+    public QueryData parseQuery(String query) {
+        return QueryParser.DEFAULT_PARSER.parse(query);
+    }
+
     @Nullable
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
+
         String videoName = selectionArgs[0];
 
-        VideoDatabaseHelper database = new VideoDatabaseHelper(getContext());
-        List<Video> videoList = database.findByName(videoName);
+        QueryData queryData = this.parseQuery(videoName);
 
+        VideoDatabaseHelper database = new VideoDatabaseHelper(getContext());
+        List<Video> videoList = null;
+        if (queryData.season == null) {
+            videoList = database.findMovieByName(queryData.videoName);
+            boolean isTvShow = false;
+            if (videoList.size() == 0) {
+                isTvShow = true;
+                videoList = database.findTvShowNextEpisodes(queryData.videoName);
+            }
+            if (videoList.size() == 0) {
+                // if no next episodes show saison 1
+                isTvShow = true;
+                videoList = database.findSeasonEpisodesByName(queryData.videoName, 1);
+            }
+
+            if (isTvShow && videoList.size() > 0) {
+                Video firstVideo = videoList.get(0);
+
+                firstVideo.setDescription(firstVideo.getDescription() + " : " + firstVideo.getTitle());
+                firstVideo.setTitle(videoName);
+            }
+        } else if (queryData.season != null && queryData.episode != null) {
+            videoList = database.findEpisodeByName(queryData.videoName, queryData.season, queryData.episode);
+        } else {
+            videoList = database.findSeasonEpisodesByName(queryData.videoName, queryData.season);
+        }
+
+        Log.d("VideoContentProvider", "Query " + queryData + " " + videoList.size() + " found");
         MatrixCursor mc = new MatrixCursor(MENU_COLS);
 
         for (Video video : videoList) {
@@ -59,7 +93,8 @@ public class VideoContentProvider extends ContentProvider {
                     video.getDuration() * 60000,
                     video.getYear(),
                     "video/mkv",
-                    RecommendationBackgroundContentProvider.addBackground(video.getPoster())
+                    RecommendationBackgroundContentProvider.addBackground(video.getPoster()),
+                    video.getPath()
             });
         }
 

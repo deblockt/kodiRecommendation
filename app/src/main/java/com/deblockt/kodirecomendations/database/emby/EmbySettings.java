@@ -38,6 +38,9 @@ public class EmbySettings {
             Log.i(TAG, "Emby database found " + DB_PATH);
             File settingsFile = new File(KodiSettings.DB_DIR + "/../addon_data/plugin.video.emby/settings.xml");
             EMBY_IP = settingsFile.exists() ? loadEmbyIp(settingsFile) : null;
+            if (EMBY_IP == null) {
+                Log.e(TAG, "Impossible de charger les paramètres du serveur Emby");
+            }
         }
     }
 
@@ -62,11 +65,22 @@ public class EmbySettings {
                     continue;
                 }
                 String name = parser.getName();
+                Log.d(TAG, "name : " + name);
                 // Starts by looking for the entry tag
-                if (name.equals("setting") && "ipaddress".equals(parser.getAttributeValue(null,"id"))) {
-                    ip = parser.getAttributeValue(null,"value");
-                } if (name.equals("setting") && "port".equals(parser.getAttributeValue(null,"id"))) {
-                    port = parser.getAttributeValue(null,"value");
+                if (name.equals("setting")) {
+                    String id = parser.getAttributeValue(null,"id");
+                    Log.d(TAG, "id : " + id);
+                    if ("ipaddress".equals(id)) {
+                        ip = parser.getAttributeValue(null, "value");
+                    } else if ("port".equals(id)) {
+                        port = parser.getAttributeValue(null,"value");
+                    } else if ("server".equals(id)) {
+                        String[] splitedUrl = parser.getAttributeValue(null,"value").split(":");
+                        port = splitedUrl[2];
+                        ip = splitedUrl[1].substring(2);
+                    } else {
+                        skip(parser);
+                    }
                 } else {
                     skip(parser);
                 }

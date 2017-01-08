@@ -18,12 +18,9 @@ public class DetailsActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        String id = getIntent().getData().getLastPathSegment();
-
-        Video video = new VideoDatabaseHelper(this).findMovieById(id);
-
+        String filePath =  getIntent().getStringExtra(SearchManager.EXTRA_DATA_KEY);
         Intent intent = new Intent(this, KodiRunActivity.class);
-        intent.putExtra("url", video.getPath());
+        intent.putExtra("url", filePath);
         startActivity(intent);
         finish();
     }

@@ -111,17 +111,20 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
             "	) nextEpisodes  on nextEpisodes.idShow = season_view.idShow and episode_view.c12 * 100 + episode_view.c13 = nextEpisodes.episodeId";
 
 
-    public static final String LAST_PLAYED_EPISODE = "select  "+
-            "season_view.idShow as idShow, "+
-            "season_view.idSeason as idSeason, "+
-            "max(episode_view.c12 * 100 + episode_view.c13) as lastPlayed," +
-            "tvshow_view.lastPlayed as lastPlayedDate "+
-            "from tvshow_view "+
-            "	join season_view on season_view.idShow = tvshow_view.idShow  "+
-            "	join episode_view on episode_view.idSeason = season_view.idSeason "+
-            "where episode_view.playCount is not null  "+
-            "	and tvshow_view.totalCount <> tvshow_view.watchedcount "+
-            "group by season_view.idSeason ";
+    public static final String LAST_PLAYED_EPISODE =
+            "select idShow as idShow, max(lastPlayed) as lastPlayed, max(lastPlayedDate) as lastPlayedDate from ("+
+            "select  "+
+                "season_view.idShow as idShow, "+
+                "season_view.idSeason as idSeason, "+
+                "max(episode_view.c12 * 100 + episode_view.c13) as lastPlayed," +
+                "tvshow_view.lastPlayed as lastPlayedDate "+
+                "from tvshow_view "+
+                "	join season_view on season_view.idShow = tvshow_view.idShow  "+
+                "	join episode_view on episode_view.idSeason = season_view.idSeason "+
+                "where episode_view.playCount is not null  "+
+                "	and tvshow_view.totalCount <> tvshow_view.watchedcount "+
+                "group by season_view.idSeason "+
+            ") group by idShow";
 
     public static final String TO_PLAY_EPISODE = "select req.idShow, max(episodeId) as episodeId from (" +
             "select  season_view.idShow, lastEpisode.lastPlayed, "+
@@ -188,6 +191,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void addToVideoList(SQLiteDatabase readableDatabase, List<Video> list, String query, String group, VideoType type, String... parameters) {
+        Log.d(TAG, "query " + query);
         Cursor cursor = null;
         try {
             cursor = readableDatabase.rawQuery(query, parameters);
@@ -266,7 +270,7 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public List<Video> findByName(String name) {
+    public List<Video> findMovieByName(String name) {
         SQLiteDatabase readableDatabase = this.getReadableDatabase();
         List<Video> retour = new ArrayList<>();
 
@@ -304,6 +308,86 @@ public class VideoDatabaseHelper extends SQLiteOpenHelper {
         readableDatabase.close();
 
         return retour.get(0);
+    }
+
+    public List<Video> findEpisodeByName(String name, Integer season, Integer episode) {
+
+        SQLiteDatabase readableDatabase = this.getReadableDatabase();
+        List<Video> retour = new ArrayList<>();
+
+        String query = "Select  idEpisode + " + TV_SHOW_ADD_ID + " as id " +
+                ", 's' || c12 || 'e' || c13 || ' : ' || c00 as title " +
+                ", c06 as poster " +
+                ", null as fanart " +
+                ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path " +
+                ", (resumeTimeInSeconds / totalTimeInSeconds) * 100 as progress " +
+                ", c01 as description " +
+                ", strftime('%Y', c05) as year, c09  / 60 as duration " +
+                " from episode_view " +
+                " where strTitle like ? and c12 = ? and c13 = ?";
+
+        addToVideoList(readableDatabase, retour, query, "finded", VideoType.EPISODE, "%" + name + "%", "" + season, "" + episode);
+
+        readableDatabase.close();
+
+        return retour;
+    }
+
+    public List<Video> findSeasonEpisodesByName(String name, Integer season) {
+
+        SQLiteDatabase readableDatabase = this.getReadableDatabase();
+        List<Video> retour = new ArrayList<>();
+
+        String query = "Select  idEpisode + " + TV_SHOW_ADD_ID + " as id " +
+                ", c00 as title " +
+                ", c06 as poster " +
+                ", null as fanart " +
+                ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path " +
+                ", (resumeTimeInSeconds / totalTimeInSeconds) * 100 as progress " +
+                ", 'saison ' || c12 || ' episode ' || c13" +
+                " as description " +
+                ", strftime('%Y', c05)  as year, c09  / 60 as duration " +
+                " from episode_view " +
+                " where strTitle like ? and c12 = ?" +
+                " order by cast(c13 as decimal)";
+
+        addToVideoList(readableDatabase, retour, query, "finded", VideoType.EPISODE, "%" + name + "%", "" + season);
+
+        readableDatabase.close();
+
+        return retour;
+    }
+
+    public List<Video> findTvShowNextEpisodes(String name) {
+        String query =
+                "select idEpisode + " + TV_SHOW_ADD_ID + " as id " +
+                        ", c00 as title " +
+                        ", c06 as poster " +
+                        ", null as fanart " +
+                        ", case when strFilename like strPath  || '%' then  strFilename else  'file://' || strPath || strFilename end as path " +
+                        ", (resumeTimeInSeconds / totalTimeInSeconds) * 100 as progress " +
+                        ", 'saison ' || c12 || ' episode ' || c13" +
+                        " as description " +
+                        ", strftime('%Y', c05) as year, c09 / 60 as duration " +
+                        " from episode_view join ( " +
+                        "select season_view.idShow as idShow, " +
+                        "season_view.idSeason as idSeason, " +
+                        "max(episode_view.c12 * 100 + episode_view.c13) as lastPlayed " +
+                        "from  episode_view " +
+                        "join season_view on season_view.idSeason = episode_view.idSeason " +
+                        "where episode_view.playCount is not null and episode_view.strTitle like ? " +
+                        "group by season_view.idSeason) last_epi on last_epi.idSeason = episode_view.idSeason " +
+                        "where episode_view.c12 * 100 + episode_view.c13 > last_epi.lastPlayed " +
+                        "order by episode_view.c12 * 100 + episode_view.c13 " +
+                        "limit 10";
+
+        SQLiteDatabase readableDatabase = this.getReadableDatabase();
+        List<Video> retour = new ArrayList<>();
+        addToVideoList(readableDatabase, retour, query, "finded", VideoType.EPISODE, "%" + name + "%");
+
+        readableDatabase.close();
+
+        return retour;
     }
 }
 

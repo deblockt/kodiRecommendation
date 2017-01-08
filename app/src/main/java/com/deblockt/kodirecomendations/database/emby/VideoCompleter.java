@@ -25,7 +25,7 @@ public class VideoCompleter {
 
        // video.setPath("prosmb://192.168.0.20/multimedia/Multimedia/Film/Ooops.noah.is.gone/Ooops.noah.is.gone.mkv");
 
-        Log.i("VideoCompleter", "Load emby info for " + video.getId() + " : " + video.getTitle());
+        Log.i("VideoCompleter", "Load emby info for " + video.getId() + " : " + video.getTitle() + " : " + video.getType());
         EmbyInfo info = null;
         if (VideoType.EPISODE.equals(video.getType())) {
             info =  HELPER.getEmbyInfo(EmbyDatabaseHelper.VideoType.EPISODE, video.getId() - VideoDatabaseHelper.TV_SHOW_ADD_ID);
@@ -34,7 +34,7 @@ public class VideoCompleter {
         }
 
         if (info != null) {
-            Log.i("VideoCompleter", "Emby info found " + video.getTitle());
+            Log.i("VideoCompleter", "Emby info found " + video.getTitle() + " : " + info);
             String image = String.format(IMAGE_URL, EmbySettings.EMBY_IP, info.getPrimaryItem(), info.getTag());
             String background = String.format(BACKDROP_URL, EmbySettings.EMBY_IP, info.getBackdropItem(), info.getTag());
 
